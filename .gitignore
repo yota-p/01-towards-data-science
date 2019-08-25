@@ -90,3 +90,9 @@ target/
 
 # Emacs cache
 *.~
+
+# Jupyter notebook log (includes token)
+jupyter.log
+
+# Pytest cache
+.pytest_cache/
