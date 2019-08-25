@@ -9,6 +9,7 @@ BUCKET = [OPTIONAL] your-bucket-for-syncing-data (do not include 's3://')
 PROFILE = default
 PROJECT_NAME = 01-towards-data-science
 PYTHON_INTERPRETER = python3
+IRIS_URL = "https://archive.ics.uci.edu/ml/machine-learning-databases/iris/iris.data"
 
 ifeq (,$(shell which conda))
 HAS_CONDA=False
@@ -20,19 +21,29 @@ endif
 # COMMANDS                                                                      #
 #################################################################################
 
+.PHONY: all clean
+
+## All
+all: data/raw/iris.csv
+
 ## Install Python Dependencies
 requirements: test_environment
 	$(PYTHON_INTERPRETER) -m pip install -U pip setuptools wheel
 	$(PYTHON_INTERPRETER) -m pip install -r requirements.txt
 
 ## Make Dataset
+data/raw/iris.csv:
+	$(PYTHON_INTERPRETER) src/data/download.py $(IRIS_URL) $@
+
 data: requirements
 	$(PYTHON_INTERPRETER) src/data/make_dataset.py data/raw data/processed
 
 ## Delete all compiled Python files
 clean:
+	rm -f data/raw/*.csv
 	find . -type f -name "*.py[co]" -delete
 	find . -type d -name "__pycache__" -delete
+	find . -type f -name "*~" -delete
 
 ## Lint using flake8
 lint:
