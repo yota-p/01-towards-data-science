@@ -92,7 +92,7 @@ target/
 *.~
 
 # Jupyter notebook log (includes token)
-jupyter.log
+notebooks/jupyter.log
 
 # Pytest cache
 .pytest_cache/
