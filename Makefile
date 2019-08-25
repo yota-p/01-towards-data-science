@@ -1,4 +1,4 @@
-.PHONY: clean data lint requirements sync_data_to_s3 sync_data_from_s3
+.PHONY: all clean test jupyter data lint requirements sync_data_to_s3 sync_data_from_s3
 
 #################################################################################
 # GLOBALS                                                                       #
@@ -21,48 +21,52 @@ endif
 # COMMANDS                                                                      #
 #################################################################################
 
-.PHONY: all clean test
-
-## All
-all: data/raw/iris.csv data/processed/processed.pickle reports/figures/exploratory.png
+## Clean
+clean:
+	rm -f data/raw/*.csv
+	rm -f data/processed/*.pickle
+	rm -f data/processed/*.xlsx
+	rm -f reports/figures/*.png
+	rm -f models/*.model
+	find . -type f -name "*~" -delete
+	find . -type f -name "*.py[co]" -delete
+	find . -type d -name "__pycache__" -delete
 
 ## Start Jupyter-Notebook
 jupyter:
 	nohup jupyter notebook --port 8888 --ip=0.0.0.0 --allow-root >> notebooks/jupyter.log 2>&1 &
 	tail -n 2 notebooks/jupyter.log
 
-## Install Python Dependencies
-requirements: test_environment
-	$(PYTHON_INTERPRETER) -m pip install -U pip setuptools wheel
-	$(PYTHON_INTERPRETER) -m pip install -r requirements.txt
+## Install Python Dependencies # Dangerous: Installing new pip may cause problems
+#requirements: test_environment
+#	$(PYTHON_INTERPRETER) -m pip install -U pip setuptools wheel
+#	$(PYTHON_INTERPRETER) -m pip install -r requirements.txt
 
-## Make Dataset
+## Download Dataset
 data/raw/iris.csv:
 	$(PYTHON_INTERPRETER) src/data/download.py $(IRIS_URL) $@
 
 data: requirements
 	$(PYTHON_INTERPRETER) src/data/make_dataset.py data/raw data/processed
 
+## Preprocessing
+data/processed/processed.pickle: data/raw/iris.csv
+	$(PYTHON_INTERPRETER) src/data/preprocess.py $< $@ --excel data/processed/processed.xlsx
+
 ## Export report
 reports/figures/exploratory.png: data/processed/processed.pickle
 	$(PYTHON_INTERPRETER) src/visualization/exploratory.py $< $@
 
-data/processed/processed.pickle: data/raw/iris.csv
-	$(PYTHON_INTERPRETER) src/data/preprocess.py $< $@ --excel data/processed/processed.xlsx
+## Train model
+models/random_forest.model: data/processed/processed.pickle
+	$(PYTHON_INTERPRETER) src/models/train_model.py $< $@
+
+## All
+all: data/raw/iris.csv data/processed/processed.pickle reports/figures/exploratory.png models/random_forest.model
 
 ## Test
 test: all
 	pytest
-
-## Delete all compiled Python files
-clean:
-	rm -f data/raw/*.csv
-	rm -f data/processed/*.pickle
-	rm -f data/processed/*.xlsx
-	rm -f reports/figures/*.png
-	find . -type f -name "*~" -delete
-	find . -type f -name "*.py[co]" -delete
-	find . -type d -name "__pycache__" -delete
 
 ## Lint using flake8
 lint:
